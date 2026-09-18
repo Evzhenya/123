@@ -104,7 +104,7 @@ document.querySelectorAll("button[data-tab]").forEach(b=>b.addEventListener("cli
  document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"));
  b.classList.add("active");$(b.dataset.tab).classList.add("active");window.scrollTo({top:0,behavior:"smooth"});
 }));
-backPeriods.addEventListener("click",function(){$("periodDetail").classList.remove("active");$("periodsView").classList.add("active")});
+backPeriods.addEventListener("click",function(){$("periodDetail").classList.remove("active");$("periodsView").classList.remove("hidden");window.scrollTo({top:0,behavior:"smooth"})});
 
 function renderPeriods(){
  const g=$("periodGrid");
@@ -115,7 +115,7 @@ function renderPeriods(){
  g.querySelectorAll("[data-del-period]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();if(confirm("Удалить период и материалы?")){state.periods=state.periods.filter(p=>p.id!==b.dataset.delPeriod);delete state.content[b.dataset.delPeriod];save();renderPeriods()}}));
  const add=$("addPeriod");if(add)add.addEventListener("click",()=>periodForm());
 }
-function openPeriod(id){currentPeriod=id;$("periodsView").classList.remove("active");$("periodDetail").classList.add("active");$("periodTitle").textContent=state.periods.find(p=>p.id===id)?.title||"";renderContent()}
+function openPeriod(id){currentPeriod=id;$("periodsView").classList.add("hidden");$("periodDetail").classList.add("active");$("periodTitle").textContent=state.periods.find(p=>p.id===id)?.title||"";renderContent();window.scrollTo({top:0,behavior:"smooth"})}
 
 function renderContent(){
  const g=$("contentGrid"),data=state.content[currentPeriod]||{exhibits:[],veterans:[]};
