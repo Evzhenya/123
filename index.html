@@ -115,7 +115,7 @@ function periodForm(id){
 }
 function contentForm(kind,index){
  const data=state.content[currentPeriod]||{exhibits:[],veterans:[]};state.content[currentPeriod]=data;const old=index!=null?data[kind][index]:{};
- openModal(index!=null?"Редактировать материал":"Добавить материал",'<label>Название</label><input id="fTitle" value="'+esc(old.title||"")+'"><label>Описание</label><textarea id="fDesc">'+esc(old.description||"")+'</textarea><label>Фото — URL</label><input id="fPhoto" value="'+esc(old.photo||"')" placeholder="https://..."><label>Видео — URL</label><input id="fVideo" value="'+esc(old.video||"')" placeholder="https://..."><label>Аудио — URL</label><input id="fAudio" value="'+esc(old.audio||"')" placeholder="https://..."><div class="form-actions"><button type="button" data-close>Отмена</button><button>Сохранить</button></div>');
+ openModal(index!=null?"Редактировать материал":"Добавить материал",'<label>Название</label><input id="fTitle" value="'+esc(old.title||"")+'"><label>Описание</label><textarea id="fDesc">'+esc(old.description||"")+'</textarea><label>Фото — URL</label><input id="fPhoto" value="'+esc(old.photo||"") placeholder="https://..."><label>Видео — URL</label><input id="fVideo" value="'+esc(old.video||"") placeholder="https://..."><label>Аудио — URL</label><input id="fAudio" value="'+esc(old.audio||"") placeholder="https://..."><div class="form-actions"><button type="button" data-close>Отмена</button><button>Сохранить</button></div>');
  modalForm.onsubmit=e=>{e.preventDefault();const x={title:fTitle.value,description:fDesc.value,photo:fPhoto.value,video:fVideo.value,audio:fAudio.value};if(index!=null)data[kind][index]=x;else data[kind].push(x);save();closeModal();renderContent()};
 }
 
