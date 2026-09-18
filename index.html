@@ -22,7 +22,7 @@ footer{text-align:center;padding:30px;border-top:1px solid #d8cdbb;color:var(--m
 <form id="loginForm" class="auth">
 <div class="eyebrow">Цифровая экспозиция</div><h2>Вход в музей</h2>
 <p class="notice">Войдите как пользователь или продолжите в режиме просмотра.</p>
-<label for="login">Логин</label><input id="login" autocomplete="username" required>
+<label for="login">Email</label><input id="login" type="email" autocomplete="username" required>
 <label for="password">Пароль</label><input id="password" type="password" autocomplete="current-password" required>
 <div class="form-actions"><button type="submit">Войти</button></div>
 <button type="button" id="guestBtn" style="width:100%;margin-top:10px">Войти как гость</button>
@@ -49,7 +49,7 @@ footer{text-align:center;padding:30px;border-top:1px solid #d8cdbb;color:var(--m
 <section id="director" class="section"><h2>Биография заведующего музеем</h2><p class="lead">История и деятельность заведующего музеем.</p><div id="directorContent"></div></section>
 <section id="meetings" class="section"><h2>Живые встречи</h2><p class="lead">Встречи с ветеранами, краеведами, выпускниками и гостями музея.</p><div id="meetingsList"></div></section>
 <section id="students" class="section"><h2>Работы студентов</h2><p class="lead">Исследовательские проекты, интервью, презентации и творческие работы.</p><div id="studentsList" class="grid"></div></section>
-<section id="register" class="section"><h2>Регистрация пользователя</h2><p class="lead">Только разработчики могут создавать администраторов.</p><div class="card form"><form id="registerForm"><label for="newAdminLogin">Логин администратора</label><input id="newAdminLogin" required><label for="newAdminPassword">Пароль администратора</label><input id="newAdminPassword" type="password" required><div class="form-actions"><button type="submit">Зарегистрировать</button></div><div id="registerMessage" class="notice"></div></form></div><h2 style="margin-top:40px">Администраторы</h2><div id="adminsList" class="grid"></div></section>
+<section id="register" class="section"><h2>Регистрация пользователя</h2><p class="lead">Пользователи создаются в Supabase Auth, а права назначаются через таблицу user_roles.</p><div class="card form"><form id="registerForm"><label for="newAdminLogin">Email нового пользователя</label><input id="newAdminLogin" type="email" required><label for="newAdminPassword">Пароль</label><input id="newAdminPassword" type="password" required><div class="form-actions"><button type="submit">Зарегистрировать</button></div><div id="registerMessage" class="notice"></div></form></div><h2 style="margin-top:40px">Администраторы</h2><div id="adminsList" class="grid"></div></section>
 </main>
 <footer id="siteFooter" class="hidden">© Музей • Цифровая экспозиция</footer>
 
