@@ -69,3 +69,111 @@ create policy "public read students" on public.students for select using (true);
 -- В Supabase Storage создайте buckets:
 -- museum-photos, museum-videos, museum-audio.
 -- Для публичного просмотра включите Public bucket.
+
+
+-- Реальные роли Supabase Auth: developer / admin.
+do $$ begin
+  create type public.app_role as enum ('developer','admin');
+exception when duplicate_object then null;
+end $$;
+
+create table if not exists public.user_roles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  role public.app_role not null
+);
+
+alter table public.user_roles enable row level security;
+
+drop policy if exists "users read own role" on public.user_roles;
+create policy "users read own role"
+on public.user_roles for select
+to authenticated
+using (auth.uid() = user_id);
+
+-- Только developer может управлять ролями из SQL/серверной части.
+-- Не выдаём authenticated пользователям INSERT/UPDATE/DELETE на user_roles.
+
+drop policy if exists "admins and developers manage periods" on public.periods;
+create policy "admins and developers manage periods" on public.periods
+for all to authenticated
+using (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')))
+with check (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+
+drop policy if exists "admins and developers manage exhibits" on public.exhibits;
+create policy "admins and developers manage exhibits" on public.exhibits
+for all to authenticated
+using (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')))
+with check (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+
+drop policy if exists "admins and developers manage veterans" on public.veterans;
+create policy "admins and developers manage veterans" on public.veterans
+for all to authenticated
+using (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')))
+with check (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+
+drop policy if exists "admins and developers manage director" on public.director;
+create policy "admins and developers manage director" on public.director
+for all to authenticated
+using (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')))
+with check (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+
+drop policy if exists "admins and developers manage meetings" on public.meetings;
+create policy "admins and developers manage meetings" on public.meetings
+for all to authenticated
+using (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')))
+with check (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+
+drop policy if exists "admins and developers manage students" on public.students;
+create policy "admins and developers manage students" on public.students
+for all to authenticated
+using (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')))
+with check (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+
+-- Storage: публичное чтение, запись/изменение/удаление только для реальных администраторов.
+drop policy if exists "public read museum photos" on storage.objects;
+create policy "public read museum photos" on storage.objects for select
+to anon, authenticated using (bucket_id = 'museum-photos');
+
+drop policy if exists "staff write museum photos" on storage.objects;
+create policy "staff write museum photos" on storage.objects for insert
+to authenticated with check (bucket_id = 'museum-photos' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+
+drop policy if exists "staff update museum photos" on storage.objects;
+create policy "staff update museum photos" on storage.objects for update
+to authenticated using (bucket_id = 'museum-photos' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+
+drop policy if exists "staff delete museum photos" on storage.objects;
+create policy "staff delete museum photos" on storage.objects for delete
+to authenticated using (bucket_id = 'museum-photos' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+
+drop policy if exists "public read museum videos" on storage.objects;
+create policy "public read museum videos" on storage.objects for select
+to anon, authenticated using (bucket_id = 'museum-videos');
+
+drop policy if exists "staff write museum videos" on storage.objects;
+create policy "staff write museum videos" on storage.objects for insert
+to authenticated with check (bucket_id = 'museum-videos' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+
+drop policy if exists "staff update museum videos" on storage.objects;
+create policy "staff update museum videos" on storage.objects for update
+to authenticated using (bucket_id = 'museum-videos' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+
+drop policy if exists "staff delete museum videos" on storage.objects;
+create policy "staff delete museum videos" on storage.objects for delete
+to authenticated using (bucket_id = 'museum-videos' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+
+drop policy if exists "public read museum audio" on storage.objects;
+create policy "public read museum audio" on storage.objects for select
+to anon, authenticated using (bucket_id = 'museum-audio');
+
+drop policy if exists "staff write museum audio" on storage.objects;
+create policy "staff write museum audio" on storage.objects for insert
+to authenticated with check (bucket_id = 'museum-audio' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+
+drop policy if exists "staff update museum audio" on storage.objects;
+create policy "staff update museum audio" on storage.objects for update
+to authenticated using (bucket_id = 'museum-audio' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+
+drop policy if exists "staff delete museum audio" on storage.objects;
+create policy "staff delete museum audio" on storage.objects for delete
+to authenticated using (bucket_id = 'museum-audio' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
