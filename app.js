@@ -13,11 +13,55 @@ async function upload(input,bucket,folder,statusId){
   if(!f)return null;
   return uploadBlob(f,bucket,folder,statusId);
 }
+function setUploadStatus(status,text,percent){
+  if(!status)return;
+  status.textContent=percent==null?text:(text+" "+percent+"%");
+}
 async function uploadBlob(f,bucket,folder,statusId){
   let status=statusId?$(statusId):null;
-  if(status)status.textContent="Загрузка файла…";
   let ext=(f.name?.split(".").pop()||((f.type||"application/octet-stream").split("/")[1])||"bin").toLowerCase();
   let path=folder+"/"+crypto.randomUUID()+"."+ext;
+  const RESUMABLE_LIMIT=6*1024*1024;
+  if(f.size>RESUMABLE_LIMIT && window.tus){
+    setUploadStatus(status,"Подготовка загрузки…",0);
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session?.access_token)throw new Error("Сессия пользователя не найдена.");
+    const projectRef=(window.MUSEUM_SUPABASE_URL||"").match(/^https?:\\/\\/([^.]+)\\.supabase\\.co/ )?.[1];
+    if(!projectRef)throw new Error("Не удалось определить проект Supabase.");
+    return await new Promise((resolve,reject)=>{
+      const upload=new tus.Upload(f,{
+        endpoint:"https://"+projectRef+".storage.supabase.co/storage/v1/upload/resumable",
+        retryDelays:[0,3000,5000,10000,20000],
+        headers:{authorization:"Bearer "+session.access_token,"x-upsert":"false"},
+        uploadDataDuringCreation:true,
+        removeFingerprintOnSuccess:true,
+        metadata:{
+          bucketName:bucket,
+          objectName:path,
+          contentType:f.type||"application/octet-stream",
+          cacheControl:"3600"
+        },
+        chunkSize:6*1024*1024,
+        onError:error=>{
+          if(status)status.textContent="";
+          reject(new Error("Не удалось загрузить файл: "+(error?.message||error)));
+        },
+        onProgress:(uploaded,total)=>{
+          let pct=Math.min(100,Math.round(uploaded/total*100));
+          setUploadStatus(status,"Загрузка файла…",pct);
+        },
+        onSuccess:()=>{
+          if(status)status.textContent="Файл загружен.";
+          resolve(path);
+        }
+      });
+      upload.findPreviousUploads().then(previous=>{
+        if(previous.length)upload.resumeFromPreviousUpload(previous[0]);
+        upload.start();
+      }).catch(reject);
+    });
+  }
+  setUploadStatus(status,"Загрузка файла…",0);
   let r=await sb.storage.from(bucket).upload(path,f,{contentType:f.type||"application/octet-stream",cacheControl:"3600",upsert:false});
   if(r.error){if(status)status.textContent="";throw new Error("Не удалось загрузить файл: "+r.error.message);}
   if(status)status.textContent="Файл загружен.";
