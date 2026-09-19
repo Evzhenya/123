@@ -7,7 +7,7 @@ let state={periods:[],content:{},director:{bio:"",photo_path:""},meetings:[],stu
 const authOverlay=$("authOverlay"),siteHeader=$("siteHeader"),siteMain=$("siteMain"),siteFooter=$("siteFooter"),loginForm=$("loginForm"),loginError=$("loginError"),registerTab=$("registerTab"),modal=$("modal"),modalTitle=$("modalTitle"),modalForm=$("modalForm");
 const isAdmin=()=>!!currentUser&&(currentUser.role==="admin"||currentUser.role==="developer"),isDev=()=>currentUser?.role==="developer";
 function url(bucket,path){return path?sb.storage.from(bucket).getPublicUrl(path).data.publicUrl:""}
-function media(bucket,path,type){if(!path)return "";let u=url(bucket,path);return type==="photo"?'<img class="media" src="'+esc(u)+'" alt="Фото">':type==="video"?'<video class="media" controls src="'+esc(u)+'"></video>':'<audio class="media" controls src="'+esc(u)+'"></audio>'}
+function media(bucket,path,type){if(!path)return "";let u=url(bucket,path);return type==="photo"?'<img class="media" loading="lazy" src="'+esc(u)+'" alt="Фото" onerror="this.style.display=\'none\'">':type==="video"?'<video class="media" controls preload="metadata" playsinline src="'+esc(u)+'"></video>':'<audio class="media" controls preload="metadata" src="'+esc(u)+'"></audio>'}
 async function upload(input,bucket,folder,statusId){
   let f=$(input)?.files?.[0];
   if(!f)return null;
@@ -69,35 +69,62 @@ async function contentForm(k,id){
   recordedAudioBlob=null;
   let table=k,o=(state.content[currentPeriod]?.[k]||[]).find(x=>x.id===id)||{};
   openModal(id?"Редактировать материал":"Добавить материал",'<label>Название</label><input id="fTitle" value="'+esc(o.title)+'" required><label>Описание</label><textarea id="fDesc">'+esc(o.description)+'</textarea><label>Фото</label><input id="fPhoto" type="file" accept="image/*"><label>Видео</label><input id="fVideo" type="file" accept="video/*"><label>Аудио</label><input id="fAudio" type="file" accept="audio/*"><div class="actions"><button type="button" id="recordAudio">🎙 Записать аудио</button><span id="recordStatus" class="notice"></span></div><div class="notice" id="uploadStatus"></div><div class="form-actions"><button type="button" data-close>Отмена</button><button id="saveContent" type="submit">Сохранить</button></div>');
-  $("recordAudio").onclick=()=>toggleRecording("recordAudio","recordStatus");
-  modalForm.onsubmit=async e=>{
+  const form=modalForm, q=id=>form.querySelector("#"+id);
+  q("recordAudio").onclick=()=>toggleRecording("recordAudio","recordStatus");
+  form.onsubmit=async e=>{
     e.preventDefault();
-    let save=$("saveContent"),status=$("uploadStatus");
+    const save=q("saveContent"),status=q("uploadStatus");
     try{
       save.disabled=true;
       if(activeRecorder)await stopRecordingAndWait();
-      let r={period_id:currentPeriod,title:$("#fTitle").value.trim(),description:$("#fDesc").value,photo_path:o.photo_path||null,video_path:o.video_path||null,audio_path:o.audio_path||null};
+      let r={period_id:currentPeriod,title:q("fTitle")?.value.trim()||"",description:q("fDesc")?.value||"",photo_path:o.photo_path||null,video_path:o.video_path||null,audio_path:o.audio_path||null};
       if(!r.title)throw new Error("Введите название.");
-      if($("#fPhoto").files[0])r.photo_path=await upload("fPhoto","museum-photos","exhibits/"+currentPeriod,"uploadStatus");
-      if($("#fVideo").files[0])r.video_path=await upload("fVideo","museum-videos","exhibits/"+currentPeriod,"uploadStatus");
-      if($("#fAudio").files[0])r.audio_path=await upload("fAudio","museum-audio","exhibits/"+currentPeriod,"uploadStatus");
+      if(q("fPhoto")?.files?.[0])r.photo_path=await upload("fPhoto","museum-photos","exhibits/"+currentPeriod,"uploadStatus");
+      if(q("fVideo")?.files?.[0])r.video_path=await upload("fVideo","museum-videos","exhibits/"+currentPeriod,"uploadStatus");
+      if(q("fAudio")?.files?.[0])r.audio_path=await upload("fAudio","museum-audio","exhibits/"+currentPeriod,"uploadStatus");
       else if(recordedAudioBlob)r.audio_path=await uploadBlob(new File([recordedAudioBlob],"recording.webm",{type:recordedAudioBlob.type}),"museum-audio","exhibits/"+currentPeriod,"uploadStatus");
-      status.textContent="Сохранение записи…";
+      status.textContent="Сохранение…";
       if(id)await db(sb.from(table).update(r).eq("id",id),"Не удалось сохранить изменения");
       else await db(sb.from(table).insert(r),"Не удалось добавить материал");
       modal.classList.add("hidden");await refresh();openPeriod(currentPeriod);
     }catch(x){status.textContent="";alert("Ошибка: "+(x?.message||x))}
     finally{save.disabled=false}
-  }
+  };
 }
 function periodForm(id){let p=id&&state.periods.find(x=>x.id===id);openModal(id?"Редактировать период":"Новый период",'<label>Период</label><input id="fTitle" value="'+esc(p?.title||"")+'" required><div class="form-actions"><button type="button" data-close>Отмена</button><button>Сохранить</button></div>');modalForm.onsubmit=async e=>{e.preventDefault();let title=$("fTitle").value.trim();if(!title)throw new Error("Введите название периода.");if(p)await db(sb.from("periods").update({title}).eq("id",p.id),"Не удалось обновить период");else await db(sb.from("periods").insert({title,sort_order:state.periods.length}),"Не удалось добавить период");modal.classList.add("hidden");await refresh()}}
 function renderDirector(){$("directorContent").innerHTML='<article class="card"><h3>Заведующий музеем</h3><p>'+esc(state.director.bio)+'</p>'+media("museum-photos",state.director.photo_path,"photo")+(isAdmin()?'<div class="actions"><button id="editDirector">Редактировать</button></div>':"")+'</article>';$("editDirector")?.addEventListener("click",directorForm)}
-function directorForm(){openModal("Биография заведующего музеем",'<label>Биография</label><textarea id="fBio">'+esc(state.director.bio)+'</textarea><label>Фото</label><input id="fPhoto" type="file" accept="image/*"><div class="form-actions"><button type="button" data-close>Отмена</button><button>Сохранить</button></div>');modalForm.onsubmit=async e=>{e.preventDefault();let photo=state.director.photo_path||null;if($("fPhoto").files[0])photo=await upload("fPhoto","museum-photos","director");await sb.from("director").upsert({id:1,bio:$("fBio").value,photo_path:photo,updated_at:new Date().toISOString()});modal.classList.add("hidden");await refresh()}}
+function directorForm(){
+  openModal("Биография заведующего музеем",'<label>Биография</label><textarea id="fBio">'+esc(state.director.bio)+'</textarea><label>Фото</label><input id="fPhoto" type="file" accept="image/*"><div class="notice" id="directorStatus"></div><div class="form-actions"><button type="button" data-close>Отмена</button><button id="saveDirector" type="submit">Сохранить</button></div>');
+  const form=modalForm,q=id=>form.querySelector("#"+id);
+  form.onsubmit=async e=>{
+    e.preventDefault();let save=q("saveDirector"),status=q("directorStatus");
+    try{
+      save.disabled=true;
+      let photo=state.director.photo_path||null;
+      if(q("fPhoto")?.files?.[0])photo=await upload("fPhoto","museum-photos","director","directorStatus");
+      await db(sb.from("director").upsert({id:1,bio:q("fBio")?.value||"",photo_path:photo,updated_at:new Date().toISOString()}),"Не удалось сохранить биографию");
+      modal.classList.add("hidden");await refresh();
+    }catch(x){status.textContent="";alert("Ошибка: "+(x?.message||x))}
+    finally{save.disabled=false}
+  };
+}
 function renderMeetings(){let g=$("meetingsList");g.innerHTML=(isAdmin()?'<div class="toolbar"><button id="addMeeting">+ Добавить встречу</button></div>':"")+'<div class="search-row"><input type="search" id="search-meetings" placeholder="Поиск по названию..."></div>'+(state.meetings.length?state.meetings.map(x=>'<article class="card event searchable" data-title="'+esc(x.title.toLowerCase())+'"><b>'+esc(x.date)+'</b><h3>'+esc(x.title)+'</h3><p>'+esc(x.description)+'</p>'+media("museum-videos",x.video_path,"video")+(isAdmin()?'<div class="actions"><button data-edit-meeting="'+x.id+'">Редактировать</button><button class="danger" data-del-meeting="'+x.id+'">Удалить</button></div>':"")+'</article>').join(""):'<div class="empty">Встреч пока нет.</div>');$("search-meetings").oninput=function(){let q=this.value.toLowerCase();g.querySelectorAll(".searchable").forEach(c=>c.classList.toggle("hidden",q&&!c.dataset.title.includes(q)))};$("addMeeting")?.addEventListener("click",()=>meetingForm());g.querySelectorAll("[data-edit-meeting]").forEach(b=>b.onclick=()=>meetingForm(b.dataset.editMeeting));g.querySelectorAll("[data-del-meeting]").forEach(b=>b.onclick=async()=>{if(confirm("Удалить встречу?")){await db(sb.from("meetings").delete().eq("id",b.dataset.delMeeting),"Не удалось удалить встречу");await refresh()}})}
-function meetingForm(id){let o=state.meetings.find(x=>x.id===id)||{};openModal(id?"Редактировать встречу":"Новая встреча",'<div class="form-row"><div><label>Дата</label><input id="fDate" value="'+esc(o.date)+'"></div><div><label>Название</label><input id="fTitle" value="'+esc(o.title)+'" required></div></div><label>Описание</label><textarea id="fDesc">'+esc(o.description)+'</textarea><label>Видео</label><input id="fVideo" type="file" accept="video/*"><div class="form-actions"><button type="button" data-close>Отмена</button><button type="submit">Сохранить</button></div>');modalForm.onsubmit=async e=>{e.preventDefault();let save=e.submitter;try{if(save)save.disabled=true;let r={date:$("fDate").value.trim(),title:$("fTitle").value.trim(),description:$("fDesc").value,video_path:o.video_path||null};if(!r.title)throw new Error("Введите название встречи.");if($("fVideo").files[0])r.video_path=await upload("fVideo","museum-videos","meetings");if(id)await db(sb.from("meetings").update(r).eq("id",id),"Не удалось обновить встречу");else await db(sb.from("meetings").insert(r),"Не удалось добавить встречу");modal.classList.add("hidden");await refresh()}catch(x){alert("Ошибка: "+(x?.message||x))}finally{if(save)save.disabled=false}}}
-function renderStudents(){let g=$("studentsList");g.innerHTML=(isAdmin()?'<div class="toolbar" style="grid-column:1/-1"><button id="addStudent">+ Добавить работу</button></div>':"")+'<div class="search-row" style="grid-column:1/-1"><input type="search" id="search-students" placeholder="Поиск по названию..."></div>'+(state.students.length?state.students.map(x=>'<article class="card searchable"><div class="tag">Работа студента</div><h3>'+esc(x.title)+'</h3><p>'+esc(x.description)+'</p>'+(x.link?'<p><a href="'+esc(x.link)+'" target="_blank" rel="noopener">Открыть работу ↗</a></p>':"")+(isAdmin()?'<div class="actions"><button data-edit-student="'+x.id+'">Редактировать</button><button class="danger" data-del-student="'+x.id+'">Удалить</button></div>':"")+'</article>').join(""):'<div class="empty" style="grid-column:1/-1">Работ пока нет.</div>');$("search-students").oninput=function(){let q=this.value.toLowerCase();g.querySelectorAll(".searchable").forEach(c=>c.classList.toggle("hidden",q&&!c.querySelector("h3").textContent.toLowerCase().includes(q)))};$("addStudent")?.addEventListener("click",()=>studentForm());g.querySelectorAll("[data-edit-student]").forEach(b=>b.onclick=()=>studentForm(b.dataset.editStudent));g.querySelectorAll("[data-del-student]").forEach(b=>b.onclick=async()=>{if(confirm("Удалить работу?")){await db(sb.from("students").delete().eq("id",b.dataset.delStudent),"Не удалось удалить работу");await refresh()}})}
-function studentForm(id){let o=state.students.find(x=>x.id===id)||{};openModal(id?"Редактировать работу":"Новая работа",'<label>Название</label><input id="fTitle" value="'+esc(o.title)+'" required><label>Описание</label><textarea id="fDesc">'+esc(o.description)+'</textarea><label>Ссылка на работу</label><input id="fLink" value="'+esc(o.link||"")+'"><div class="form-actions"><button type="button" data-close>Отмена</button><button>Сохранить</button></div>');modalForm.onsubmit=async e=>{e.preventDefault();let r={title:$("fTitle").value,description:$("fDesc").value,link:$("fLink").value||null};if(!r.title)throw new Error("Введите название работы.");if(id)await db(sb.from("students").update(r).eq("id",id),"Не удалось обновить работу");else await db(sb.from("students").insert(r),"Не удалось добавить работу");modal.classList.add("hidden");await refresh()}}
-function renderAdmins(){let g=$("adminsList");g.innerHTML='<div class="empty">Новые администраторы создаются через Supabase Auth. Их роль автоматически назначается как admin.</div>'}
-$("registerForm").addEventListener("submit",async e=>{e.preventDefault();let msg=$("registerMessage"),email=$("newAdminLogin").value.trim(),password=$("newAdminPassword").value;msg.textContent="Создание администратора…";try{let {data,error}=await sb.functions.invoke("create-admin",{body:{email,password}});if(error)throw error;if(data?.error)throw new Error(data.error);msg.textContent="Администратор создан: "+email+". Он уже может войти на сайт.";e.target.reset()}catch(x){msg.textContent="Ошибка: "+(x.message||"не удалось создать пользователя")}});
-modal.onclick=e=>{if(e.target===modal)modal.classList.add("hidden")};
-if(window.MUSEUM_SUPABASE_URL?.includes("YOUR-PROJECT")){loginError.textContent="Сначала настройте Supabase: supabase-config.js";$("guestBtn").disabled=true}
+function meetingForm(id){
+  let o=state.meetings.find(x=>x.id===id)||{};
+  openModal(id?"Редактировать встречу":"Новая встреча",'<div class="form-row"><div><label>Дата</label><input id="fDate" value="'+esc(o.date)+'"></div><div><label>Название</label><input id="fTitle" value="'+esc(o.title)+'" required></div></div><label>Описание</label><textarea id="fDesc">'+esc(o.description)+'</textarea><label>Видео</label><input id="fVideo" type="file" accept="video/*"><div class="notice" id="meetingStatus"></div><div class="form-actions"><button type="button" data-close>Отмена</button><button id="saveMeeting" type="submit">Сохранить</button></div>');
+  const form=modalForm,q=id=>form.querySelector("#"+id);
+  form.onsubmit=async e=>{
+    e.preventDefault();let save=q("saveMeeting"),status=q("meetingStatus");
+    try{
+      save.disabled=true;
+      let r={date:q("fDate")?.value.trim()||"",title:q("fTitle")?.value.trim()||"",description:q("fDesc")?.value||"",video_path:o.video_path||null};
+      if(!r.title)throw new Error("Введите название встречи.");
+      if(q("fVideo")?.files?.[0])r.video_path=await upload("fVideo","museum-videos","meetings","meetingStatus");
+      status.textContent="Сохранение…";
+      if(id)await db(sb.from("meetings").update(r).eq("id",id),"Не удалось сохранить встречу");
+      else await db(sb.from("meetings").insert(r),"Не удалось добавить встречу");
+      modal.classList.add("hidden");await refresh();
+    }catch(x){status.textContent="";alert("Ошибка: "+(x?.message||x))}
+    finally{save.disabled=false}
+  };
+}
