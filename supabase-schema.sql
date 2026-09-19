@@ -159,15 +159,15 @@ to anon, authenticated using (bucket_id = 'museum-photos');
 
 drop policy if exists "staff write museum photos" on storage.objects;
 create policy "staff write museum photos" on storage.objects for insert
-to authenticated with check (bucket_id = 'museum-photos' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+to authenticated with check (bucket_id = 'museum-photos' and (select private.is_museum_staff()));
 
 drop policy if exists "staff update museum photos" on storage.objects;
 create policy "staff update museum photos" on storage.objects for update
-to authenticated using (bucket_id = 'museum-photos' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+to authenticated using (bucket_id = 'museum-photos' and (select private.is_museum_staff()));
 
 drop policy if exists "staff delete museum photos" on storage.objects;
 create policy "staff delete museum photos" on storage.objects for delete
-to authenticated using (bucket_id = 'museum-photos' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+to authenticated using (bucket_id = 'museum-photos' and (select private.is_museum_staff()));
 
 drop policy if exists "public read museum videos" on storage.objects;
 create policy "public read museum videos" on storage.objects for select
@@ -175,15 +175,15 @@ to anon, authenticated using (bucket_id = 'museum-videos');
 
 drop policy if exists "staff write museum videos" on storage.objects;
 create policy "staff write museum videos" on storage.objects for insert
-to authenticated with check (bucket_id = 'museum-videos' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+to authenticated with check (bucket_id = 'museum-videos' and (select private.is_museum_staff()));
 
 drop policy if exists "staff update museum videos" on storage.objects;
 create policy "staff update museum videos" on storage.objects for update
-to authenticated using (bucket_id = 'museum-videos' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+to authenticated using (bucket_id = 'museum-videos' and (select private.is_museum_staff()));
 
 drop policy if exists "staff delete museum videos" on storage.objects;
 create policy "staff delete museum videos" on storage.objects for delete
-to authenticated using (bucket_id = 'museum-videos' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+to authenticated using (bucket_id = 'museum-videos' and (select private.is_museum_staff()));
 
 drop policy if exists "public read museum audio" on storage.objects;
 create policy "public read museum audio" on storage.objects for select
@@ -191,12 +191,12 @@ to anon, authenticated using (bucket_id = 'museum-audio');
 
 drop policy if exists "staff write museum audio" on storage.objects;
 create policy "staff write museum audio" on storage.objects for insert
-to authenticated with check (bucket_id = 'museum-audio' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+to authenticated with check (bucket_id = 'museum-audio' and (select private.is_museum_staff()));
 
 drop policy if exists "staff update museum audio" on storage.objects;
 create policy "staff update museum audio" on storage.objects for update
-to authenticated using (bucket_id = 'museum-audio' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+to authenticated using (bucket_id = 'museum-audio' and (select private.is_museum_staff()));
 
 drop policy if exists "staff delete museum audio" on storage.objects;
 create policy "staff delete museum audio" on storage.objects for delete
-to authenticated using (bucket_id = 'museum-audio' and exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+to authenticated using (bucket_id = 'museum-audio' and (select private.is_museum_staff()));
