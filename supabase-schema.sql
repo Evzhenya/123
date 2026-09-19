@@ -90,44 +90,67 @@ on public.user_roles for select
 to authenticated
 using (auth.uid() = user_id);
 
+-- Безопасная проверка роли для RLS.
+-- SECURITY DEFINER нужен, чтобы проверка роли не упиралась во взаимные RLS-политики.
+create schema if not exists private;
+
+create or replace function private.is_museum_staff()
+returns boolean
+language sql
+security definer
+set search_path = ''
+stable
+as $
+  select exists (
+    select 1
+    from public.user_roles
+    where user_id = (select auth.uid())
+      and role in ('developer','admin')
+  );
+$;
+
+revoke execute on function private.is_museum_staff() from public;
+grant usage on schema private to authenticated;
+grant execute on function private.is_museum_staff() to authenticated;
+
 -- Только developer может управлять ролями из SQL/серверной части.
 -- Не выдаём authenticated пользователям INSERT/UPDATE/DELETE на user_roles.
 
 drop policy if exists "admins and developers manage periods" on public.periods;
 create policy "admins and developers manage periods" on public.periods
 for all to authenticated
-using (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')))
-with check (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+using ((select private.is_museum_staff()))
+with check ((select private.is_museum_staff()));
 
 drop policy if exists "admins and developers manage exhibits" on public.exhibits;
 create policy "admins and developers manage exhibits" on public.exhibits
 for all to authenticated
-using (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')))
-with check (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+using ((select private.is_museum_staff()))
+with check ((select private.is_museum_staff()));
 
 drop policy if exists "admins and developers manage veterans" on public.veterans;
 create policy "admins and developers manage veterans" on public.veterans
 for all to authenticated
-using (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')))
-with check (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+using ((select private.is_museum_staff()))
+with check ((select private.is_museum_staff()));
 
 drop policy if exists "admins and developers manage director" on public.director;
 create policy "admins and developers manage director" on public.director
 for all to authenticated
-using (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')))
-with check (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+using ((select private.is_museum_staff()))
+with check ((select private.is_museum_staff()));
 
 drop policy if exists "admins and developers manage meetings" on public.meetings;
 create policy "admins and developers manage meetings" on public.meetings
 for all to authenticated
-using (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')))
-with check (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+using ((select private.is_museum_staff()))
+with check ((select private.is_museum_staff()));
 
 drop policy if exists "admins and developers manage students" on public.students;
 create policy "admins and developers manage students" on public.students
 for all to authenticated
-using (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')))
-with check (exists (select 1 from public.user_roles r where r.user_id=auth.uid() and r.role in ('developer','admin')));
+using ((select private.is_museum_staff()))
+with check ((select private.is_museum_staff()));
 
 -- Storage: публичное чтение, запись/изменение/удаление только для реальных администраторов.
 drop policy if exists "public read museum photos" on storage.objects;
