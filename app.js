@@ -26,7 +26,7 @@ async function uploadBlob(f,bucket,folder,statusId){
     setUploadStatus(status,"Подготовка загрузки…",0);
     const {data:{session}}=await sb.auth.getSession();
     if(!session?.access_token)throw new Error("Сессия пользователя не найдена.");
-    const projectRef=(window.MUSEUM_SUPABASE_URL||"").match(/^https?:\\/\\/([^.]+)\\.supabase\\.co/ )?.[1];
+    const projectRef=(window.MUSEUM_SUPABASE_URL||"").match(/^https?:\/\/([^.]+)\.supabase\.co/)?.[1];
     if(!projectRef)throw new Error("Не удалось определить проект Supabase.");
     return await new Promise((resolve,reject)=>{
       const upload=new tus.Upload(f,{
