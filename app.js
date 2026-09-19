@@ -21,7 +21,7 @@ async function uploadBlob(f,bucket,folder,statusId){
   let status=statusId?$(statusId):null;
   let ext=(f.name?.split(".").pop()||((f.type||"application/octet-stream").split("/")[1])||"bin").toLowerCase();
   let path=folder+"/"+crypto.randomUUID()+"."+ext;
-  const RESUMABLE_LIMIT=6*1024*1024;
+  const RESUMABLE_LIMIT=0;
   if(f.size>RESUMABLE_LIMIT && window.tus){
     setUploadStatus(status,"Подготовка загрузки…",0);
     const {data:{session}}=await sb.auth.getSession();
@@ -33,7 +33,7 @@ async function uploadBlob(f,bucket,folder,statusId){
         endpoint:"https://"+projectRef+".storage.supabase.co/storage/v1/upload/resumable",
         retryDelays:[0,3000,5000,10000,20000],
         headers:{authorization:"Bearer "+session.access_token,"x-upsert":"false"},
-        uploadDataDuringCreation:true,
+        uploadDataDuringCreation:false,
         removeFingerprintOnSuccess:true,
         metadata:{
           bucketName:bucket,
@@ -48,7 +48,8 @@ async function uploadBlob(f,bucket,folder,statusId){
         },
         onProgress:(uploaded,total)=>{
           let pct=Math.min(100,Math.round(uploaded/total*100));
-          setUploadStatus(status,"Загрузка файла…",pct);
+          let done=(uploaded/1024/1024).toFixed(1),all=(total/1024/1024).toFixed(1);
+          setUploadStatus(status,"Загрузка файла… "+done+" / "+all+" МБ",pct);
         },
         onSuccess:()=>{
           if(status)status.textContent="Файл загружен.";
