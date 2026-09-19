@@ -7,7 +7,13 @@ let state={periods:[],content:{},director:{bio:"",photo_path:""},meetings:[],stu
 const authOverlay=$("authOverlay"),siteHeader=$("siteHeader"),siteMain=$("siteMain"),siteFooter=$("siteFooter"),loginForm=$("loginForm"),loginError=$("loginError"),registerTab=$("registerTab"),modal=$("modal"),modalTitle=$("modalTitle"),modalForm=$("modalForm");
 const isAdmin=()=>!!currentUser&&(currentUser.role==="admin"||currentUser.role==="developer"),isDev=()=>currentUser?.role==="developer";
 function url(bucket,path){return path?sb.storage.from(bucket).getPublicUrl(path).data.publicUrl:""}
-function media(bucket,path,type){if(!path)return "";let u=url(bucket,path);return type==="photo"?'<img class="media" loading="lazy" src="'+esc(u)+'" alt="Фото" onerror="this.style.display=\'none\'">':type==="video"?'<video class="media" controls preload="metadata" playsinline src="'+esc(u)+'"></video>':'<audio class="media" controls preload="metadata" src="'+esc(u)+'"></audio>'}
+function media(bucket,path,type){
+  if(!path)return "";
+  let u=url(bucket,path);
+  if(type==="photo")return '<img class="media" loading="lazy" src="'+esc(u)+'" alt="Фото" onerror="this.style.display=\'none\'">';
+  if(type==="video")return '<div class="media-wrap"><video class="media meeting-video" controls preload="metadata" playsinline src="'+esc(u)+'" onerror="this.outerHTML=\'<div class="notice video-error">Видео не удалось загрузить. Проверьте, что bucket museum-videos открыт для публичного чтения и файл имеет корректный формат.</div>\'"></video></div>';
+  return '<audio class="media" controls preload="metadata" src="'+esc(u)+'" onerror="this.outerHTML=\'<div class="notice">Аудио не удалось загрузить.</div>\'"></audio>';
+}
 async function upload(input,bucket,folder,statusId){
   let f=$(input)?.files?.[0];
   if(!f)return null;
